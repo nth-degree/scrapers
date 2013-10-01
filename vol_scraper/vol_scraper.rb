@@ -2,30 +2,33 @@ require 'nokogiri'
 require 'restclient'
 require 'date'
 
-def get_vol_data(tckr, dt)
-url = 'http://finance.yahoo.com/q/os?s=yndx&m=2013-08-17/'
-#url = 'http://finance.yahoo.com/q/os?s='+tckr+'&m='+dt
-page = Nokogiri::HTML(RestClient.get(url+dt))
-lst = page.css("table").css("a")
+def get_vol_data(tckr)
+url = 'http://finance.yahoo.com/q/os?s='
+url2 = "&m=2013-11"
+page = Nokogiri::HTML(RestClient.get(url+tckr+url2))
+alllines=""
 
-i = -1
-output = []
-lst.each { |x|
-	if x!=nil then 
-			if x["href"]!=nil
-			if x["href"].match('(http://www.nasdaq.com/earnings/report/)(.+)') then
-			   puts i=i+1
-			   output << x["href"].gsub(prefix, "") + "|" + dt2.to_s + "|" + x.children.to_s + "\n"
-			end
+ytckr = tckr.downcase
+underlying = page.xpath('//*[@id="yfs_l84_'+ ytckr +'"]').text
+puts underlying
+num_options = page.xpath('//*[@id="content"]/table/tr[4]/td[1]/table[5]/tr[1]/td[1]/table/tr[1]/td[1]/table').children.count
+
+	for i in 2..num_options
+		thisline = tckr + "|" + underlying
+		for j in 1..15
+			val = "|" + page.xpath('//*[@id="content"]/table/tr[4]/td[1]/table[5]/tr[1]/td[1]/table/tr[1]/td[1]/table/tr[' + i.to_s + ']/td[' +j.to_s+ ']').text
+			thisline << val
 		end
+		alllines << thisline << "\n"
 	end
-}
-return output
+	puts alllines 
 end
 
-def run_all(outfile, dt)
+def run_all(infile, outfile)
     begin
-    File.open(outfile, 'a') {|f| f.puts get_daily_earnings(dt)}
+        File.open(infile, "r").each_line do |line|
+          File.open(outfile, 'a') {|f| f.puts get_vol_data(line)}
+        end 
     rescue
-  	end
+    end 
 end
